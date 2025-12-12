@@ -21,11 +21,12 @@ from export_to_sheets import export_leads_to_sheet
 def main():
     parser = argparse.ArgumentParser(description='Scrape leads by industry with quality validation')
     parser.add_argument('--industry', required=True, help='Target industry (e.g., "Software Development")')
-    parser.add_argument('--actor-id', default='IoSHqwTR9YGhzccez', help='Apify actor ID')
+    parser.add_argument('--actor-id', default='worldunboxer/rapid-linkedin-scraper', help='Apify actor ID')
     parser.add_argument('--input-file', required=True, help='JSON file with actor input parameters')
     parser.add_argument('--test-size', type=int, default=25, help='Number of leads for test run')
     parser.add_argument('--full-size', type=int, default=1000, help='Number of leads for full scrape')
     parser.add_argument('--quality-threshold', type=float, default=80.0, help='Minimum quality percentage')
+    parser.add_argument('--spreadsheet-url', help='URL of existing Google Sheet to export to')
     parser.add_argument('--test-only', action='store_true', help='Run test only, skip full scrape')
     parser.add_argument('--skip-validation', action='store_true', help='Skip quality validation')
     
@@ -50,7 +51,10 @@ def main():
     print("-" * 70)
     
     test_input = base_input.copy()
-    test_input['maxResults'] = args.test_size
+    test_input['limit'] = args.test_size
+    # Ensure keyword is present if not in input
+    if 'keywords' not in test_input and 'searchKeywords' in test_input:
+         test_input['keywords'] = test_input.pop('searchKeywords')
     
     test_results_file = '.tmp/test_run.json'
     
@@ -66,7 +70,7 @@ def main():
         print("\nSTEP 2: Validating lead quality...")
         print("-" * 70)
         
-        validation_results = validate_leads(test_leads, args.industry)
+        validation_results = validate_leads(test_leads, args.industry, threshold=args.quality_threshold)
         print_validation_report(validation_results)
         
         # Save validation results
@@ -96,7 +100,10 @@ def main():
     print("-" * 70)
     
     full_input = base_input.copy()
-    full_input['maxResults'] = args.full_size
+    full_input['limit'] = args.full_size
+     # Ensure keyword is present if not in input
+    if 'keywords' not in full_input and 'searchKeywords' in full_input:
+         full_input['keywords'] = full_input.pop('searchKeywords')
     
     full_results_file = '.tmp/full_scrape.json'
     
@@ -115,7 +122,7 @@ def main():
     sheet_name = f"{args.industry} Leads - {timestamp}"
     
     try:
-        sheet_url = export_leads_to_sheet(full_leads, sheet_name)
+        sheet_url = export_leads_to_sheet(full_leads, sheet_name, existing_spreadsheet_url=args.spreadsheet_url)
         
         # Save URL
         url_file = '.tmp/sheet_url.txt'

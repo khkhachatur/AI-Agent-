@@ -12,7 +12,8 @@ from apify_client import ApifyClient
 from dotenv import load_dotenv
 
 # Load environment variables
-load_dotenv()
+env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.env')
+load_dotenv(env_path)
 
 def run_actor(actor_id, run_input, max_wait_secs=300):
     """

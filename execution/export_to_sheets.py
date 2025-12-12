@@ -13,7 +13,8 @@ from google.oauth2.service_account import Credentials
 from dotenv import load_dotenv
 
 # Load environment variables
-load_dotenv()
+env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.env')
+load_dotenv(env_path)
 
 
 def get_sheets_client():
@@ -60,16 +61,17 @@ def create_spreadsheet(client, title):
     return spreadsheet
 
 
-def export_leads_to_sheet(leads, sheet_name=None):
+def export_leads_to_sheet(leads, sheet_name=None, existing_spreadsheet_url=None):
     """
-    Export leads to a new Google Sheet.
+    Export leads to a Google Sheet.
     
     Args:
         leads (list): List of lead dictionaries
-        sheet_name (str): Optional custom sheet name
+        sheet_name (str): Optional custom sheet name (for new sheets)
+        existing_spreadsheet_url (str): Optional URL of existing sheet to append to
         
     Returns:
-        str: URL of the created spreadsheet
+        str: URL of the spreadsheet
     """
     if not leads:
         raise ValueError("No leads to export")
@@ -77,14 +79,22 @@ def export_leads_to_sheet(leads, sheet_name=None):
     # Initialize client
     client = get_sheets_client()
     
-    # Create spreadsheet
-    if not sheet_name:
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
-        sheet_name = f"Leads Export - {timestamp}"
-    
-    print(f"Creating spreadsheet: {sheet_name}")
-    spreadsheet = create_spreadsheet(client, sheet_name)
-    worksheet = spreadsheet.sheet1
+    if existing_spreadsheet_url:
+        print(f"Opening existing spreadsheet: {existing_spreadsheet_url}")
+        spreadsheet = client.open_by_url(existing_spreadsheet_url)
+        # Create a new worksheet for this batch
+        timestamp = datetime.now().strftime("%Y-%m-%d %H-%M")
+        title = f"Leads {timestamp}"
+        worksheet = spreadsheet.add_worksheet(title=title, rows=len(leads)+1, cols=20)
+    else:
+        # Create spreadsheet
+        if not sheet_name:
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+            sheet_name = f"Leads Export - {timestamp}"
+        
+        print(f"Creating spreadsheet: {sheet_name}")
+        spreadsheet = create_spreadsheet(client, sheet_name)
+        worksheet = spreadsheet.sheet1
     
     # Prepare headers (extract all unique keys from leads)
     all_keys = set()

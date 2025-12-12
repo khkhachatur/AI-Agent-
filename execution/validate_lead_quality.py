@@ -10,16 +10,18 @@ import json
 from dotenv import load_dotenv
 
 # Load environment variables
-load_dotenv()
+env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.env')
+load_dotenv(env_path)
 
 
-def validate_leads(leads, target_industry):
+def validate_leads(leads, target_industry, threshold=80.0):
     """
     Validate leads against target industry.
     
     Args:
         leads (list): List of lead dictionaries
         target_industry (str): Target industry name
+        threshold (float): Validation threshold percentage
         
     Returns:
         dict: Validation results with quality score and details
@@ -40,15 +42,15 @@ def validate_leads(leads, target_industry):
     industry_keywords = target_industry.lower().split()
     
     for idx, lead in enumerate(leads):
-        # Extract relevant fields for validation
-        # Adjust these fields based on actual Apify actor output
-        company_industry = lead.get('industry', '').lower()
-        company_description = lead.get('description', '').lower()
-        company_name = lead.get('companyName', '').lower()
-        headline = lead.get('headline', '').lower()
+        # Extract relevant fields for validation (Job Scraper schema)
+        # Fields: job_title, company_name, job_description, location
+        title = lead.get('job_title', '').lower()
+        company_name = lead.get('company_name', '').lower()
+        description = lead.get('job_description', '').lower()
+        location = lead.get('location', '').lower()
         
         # Combine all text fields for matching
-        combined_text = f"{company_industry} {company_description} {company_name} {headline}"
+        combined_text = f"{title} {company_name} {description}"
         
         # Check if any industry keyword appears in the combined text
         is_valid = any(keyword in combined_text for keyword in industry_keywords)
@@ -58,14 +60,14 @@ def validate_leads(leads, target_industry):
         
         details.append({
             'index': idx,
-            'company': lead.get('companyName', 'Unknown'),
-            'industry': lead.get('industry', 'Unknown'),
+            'company': lead.get('company_name', 'Unknown'),
+            'title': lead.get('job_title', 'Unknown'),
             'valid': is_valid
         })
     
     total_count = len(leads)
     quality_score = (valid_count / total_count) * 100 if total_count > 0 else 0
-    passed = quality_score >= 80.0
+    passed = quality_score >= threshold
     
     return {
         'valid_count': valid_count,
@@ -91,7 +93,7 @@ def print_validation_report(results):
         print("\nInvalid Leads:")
         for detail in results['details']:
             if not detail['valid']:
-                print(f"  - {detail['company']} (Industry: {detail['industry']})")
+                print(f"  - {detail['company']} (Title: {detail['title']})")
     print()
 
 

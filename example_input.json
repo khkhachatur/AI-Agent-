@@ -1,7 +1,6 @@
 {
-    "searchKeywords": "software engineer",
-    "locations": [
-        "United States"
-    ],
-    "maxResults": 25
+    "keywords": "Software Engineer",
+    "location": "United States",
+    "limit": 25,
+    "remote": "on-site"
 }
